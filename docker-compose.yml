@@ -3,12 +3,12 @@ services:
     build:
       context: .
     environment:
-      JAVA_TOOL_OPTIONS: -Xmx128m
+      JAVA_TOOL_OPTIONS: -Xmx256m
     command:
       - --oom
       - --chunk-mb=1
       - --report-every-mb=8
-      - --delay-ms=250
+      - --delay-ms=1000
     ports:
       - "8080:8080"
       - "8081:8081"

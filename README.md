@@ -72,9 +72,9 @@ java -jar build/libs/demo-oom-0.0.1-SNAPSHOT.jar
 
 Docker Compose starts the OOM demo and a Prometheus server on the same network.
 
-The Compose configuration limits the application heap to 128 MiB and inserts a 250 millisecond delay between allocations.
+The Compose configuration limits the application heap to 256 MiB and inserts a one second delay between allocations.
 
-That delay leaves enough scrape points to observe the heap rising before the application reaches `OutOfMemoryError`.
+This gives Prometheus several minutes of samples while the heap rises before the application reaches `OutOfMemoryError`.
 
 Start both services with:
 
