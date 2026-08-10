@@ -31,8 +31,10 @@ The build does not start OOM mode, so the test suite can run normally.
 Build the executable JAR, then start it with a small maximum heap:
 
 ```sh
-java -Xmx64m -jar build/libs/demo-oom-0.0.1-SNAPSHOT.jar --oom
+java -XX:+UseG1GC -Xmx64m -jar build/libs/demo-oom-0.0.1-SNAPSHOT.jar --oom
 ```
+
+The examples explicitly enable G1GC so that the garbage collector remains constant across runs.
 
 The application retains one mebibyte-sized byte array per iteration.
 
@@ -58,21 +60,21 @@ The exact amount retained before the error depends on the JDK, JVM options, and 
 For example, this command uses 4 MiB chunks and reports every 32 MiB:
 
 ```sh
-java -Xmx128m -jar build/libs/demo-oom-0.0.1-SNAPSHOT.jar \
+java -XX:+UseG1GC -Xmx128m -jar build/libs/demo-oom-0.0.1-SNAPSHOT.jar \
   --oom --chunk-mb=4 --report-every-mb=32 --delay-ms=100
 ```
 
 Without `--oom`, the application starts its HTTP server, prints a message, and waits without allocating the demonstration data:
 
 ```sh
-java -jar build/libs/demo-oom-0.0.1-SNAPSHOT.jar
+java -XX:+UseG1GC -jar build/libs/demo-oom-0.0.1-SNAPSHOT.jar
 ```
 
 ## Monitor with Docker Compose
 
 Docker Compose starts the OOM demo and a Prometheus server on the same network.
 
-The Compose configuration limits the application heap to 256 MiB and inserts a one second delay between allocations.
+The Compose configuration limits the application heap to 256 MiB, explicitly enables G1GC, and inserts a one second delay between allocations.
 
 This gives Prometheus several minutes of samples while the heap rises before the application reaches `OutOfMemoryError`.
 

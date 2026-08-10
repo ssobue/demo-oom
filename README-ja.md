@@ -31,8 +31,10 @@ Java ヒープを意図的に使い切り、`java.lang.OutOfMemoryError` を発�
 実行可能 JAR を作成してから、ヒープ上限を小さくして起動します。
 
 ```sh
-java -Xmx64m -jar build/libs/demo-oom-0.0.1-SNAPSHOT.jar --oom
+java -XX:+UseG1GC -Xmx64m -jar build/libs/demo-oom-0.0.1-SNAPSHOT.jar --oom
 ```
+
+実行例ではガベージコレクターを G1GC に明示的に固定し、実行環境による差を抑えます。
 
 アプリケーションは、1 MiB の `byte[]` をループごとに作成します。
 
@@ -58,21 +60,21 @@ java.lang.OutOfMemoryError: Java heap space
 次の例では、4 MiB ずつ確保し、32 MiB ごとに進捗を表示します。
 
 ```sh
-java -Xmx128m -jar build/libs/demo-oom-0.0.1-SNAPSHOT.jar \
+java -XX:+UseG1GC -Xmx128m -jar build/libs/demo-oom-0.0.1-SNAPSHOT.jar \
   --oom --chunk-mb=4 --report-every-mb=32 --delay-ms=100
 ```
 
 `--oom` を付けない場合、アプリケーションは HTTP サーバーを起動してメッセージを表示し、実験用のデータを確保せずに待機します。
 
 ```sh
-java -jar build/libs/demo-oom-0.0.1-SNAPSHOT.jar
+java -XX:+UseG1GC -jar build/libs/demo-oom-0.0.1-SNAPSHOT.jar
 ```
 
 ## Docker Compose で監視する
 
 Docker Compose は、OOM デモと Prometheus を同じネットワーク上で起動します。
 
-Compose の設定では、アプリケーションのヒープ上限を 256 MiB に設定し、確保ごとに 1 秒待機します。
+Compose の設定では、アプリケーションのヒープ上限を 256 MiB に設定し、G1GC を明示的に選択して、確保ごとに 1 秒待機します。
 
 これにより、アプリケーションが `OutOfMemoryError` に到達するまで数分間のサンプルを取得し、ヒープ増加を追跡できます。
 
