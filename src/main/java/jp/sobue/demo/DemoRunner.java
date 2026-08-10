@@ -13,6 +13,7 @@ public class DemoRunner implements ApplicationRunner {
   private static final int BYTES_PER_MIB = 1024 * 1024;
   private static final int DEFAULT_CHUNK_MIB = 1;
   private static final int DEFAULT_REPORT_EVERY_MIB = 16;
+  private static final int DEFAULT_DELAY_MILLISECONDS = 0;
 
   @Override
   public void run(ApplicationArguments args) {
@@ -23,6 +24,7 @@ public class DemoRunner implements ApplicationRunner {
 
     int chunkMib = positiveIntOption(args, "chunk-mb", DEFAULT_CHUNK_MIB);
     int reportEveryMib = positiveIntOption(args, "report-every-mb", DEFAULT_REPORT_EVERY_MIB);
+    int delayMilliseconds = nonNegativeIntOption(args, "delay-ms", DEFAULT_DELAY_MILLISECONDS);
     int chunkBytes = Math.multiplyExact(chunkMib, BYTES_PER_MIB);
     long reportEveryBytes = Math.multiplyExact((long) reportEveryMib, BYTES_PER_MIB);
     List<byte[]> retained = new ArrayList<>();
@@ -30,9 +32,10 @@ public class DemoRunner implements ApplicationRunner {
     long nextReportBytes = reportEveryBytes;
 
     System.out.printf(
-        "Starting OOM demo: chunk=%d MiB, report interval=%d MiB, max heap=%d MiB%n",
+        "Starting OOM demo: chunk=%d MiB, report interval=%d MiB, delay=%d ms, max heap=%d MiB%n",
         chunkMib,
         reportEveryMib,
+        delayMilliseconds,
         Runtime.getRuntime().maxMemory() / BYTES_PER_MIB);
 
     while (true) {
@@ -48,10 +51,27 @@ public class DemoRunner implements ApplicationRunner {
             usedBytes / BYTES_PER_MIB);
         nextReportBytes = Math.addExact(nextReportBytes, reportEveryBytes);
       }
+
+      if (delayMilliseconds > 0) {
+        try {
+          Thread.sleep(delayMilliseconds);
+        } catch (InterruptedException exception) {
+          Thread.currentThread().interrupt();
+          return;
+        }
+      }
     }
   }
 
   private int positiveIntOption(ApplicationArguments args, String name, int defaultValue) {
+    return integerOption(args, name, defaultValue, 1);
+  }
+
+  private int nonNegativeIntOption(ApplicationArguments args, String name, int defaultValue) {
+    return integerOption(args, name, defaultValue, 0);
+  }
+
+  private int integerOption(ApplicationArguments args, String name, int defaultValue, int minimum) {
     if (!args.containsOption(name)) {
       return defaultValue;
     }
@@ -63,8 +83,9 @@ public class DemoRunner implements ApplicationRunner {
 
     try {
       int value = Integer.parseInt(values.getFirst());
-      if (value <= 0) {
-        throw new IllegalArgumentException("Option --%s must be greater than zero".formatted(name));
+      if (value < minimum) {
+        throw new IllegalArgumentException(
+            "Option --%s must be at least %d".formatted(name, minimum));
       }
       return value;
     } catch (NumberFormatException exception) {
