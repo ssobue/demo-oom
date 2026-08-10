@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: demo-oom
+  main:
+    banner-mode: off
+  profiles:
+    active: dev
+
+logging:
+  level:
+    root: info
+    org.springframework: warn
