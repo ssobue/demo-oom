@@ -1,28 +1,35 @@
 package dev.sobue.demo.oom;
 
 import jakarta.annotation.PreDestroy;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
-
-/**
- * Runs the heap exhaustion workload after Spring Boot reports the application as ready.
- */
+/** Runs the heap exhaustion workload after Spring Boot reports the application as ready. */
 @Component
 @Slf4j
 public class HeapExhaustionTask {
 
+  /** Number of bytes represented by one mebibyte in allocation and reporting calculations. */
   private static final int BYTES_PER_MIB = 1024 * 1024;
+
+  /** Default size of each retained byte array, in mebibytes. */
   private static final int DEFAULT_CHUNK_MIB = 1;
+
+  /** Default interval for progress logs, in mebibytes of retained data. */
   private static final int DEFAULT_REPORT_EVERY_MIB = 16;
+
+  /** Default pause after each allocation, in milliseconds; zero means no pause. */
   private static final int DEFAULT_DELAY_MILLISECONDS = 0;
 
+  /** Parsed command-line arguments used to configure the workload. */
   private final ApplicationArguments applicationArguments;
+
+  /** Virtual thread that owns the allocation loop and can be interrupted during shutdown. */
   private volatile Thread worker;
 
   /**
@@ -34,18 +41,14 @@ public class HeapExhaustionTask {
     this.applicationArguments = applicationArguments;
   }
 
-  /**
-   * Starts the workload without blocking application startup.
-   */
+  /** Starts the workload without blocking application startup. */
   // Do not block Spring Boot's startup thread; readiness must be reported before allocation begins.
   @EventListener(ApplicationReadyEvent.class)
   void start() {
     worker = Thread.ofVirtual().name("heap-exhaustion").start(this::run);
   }
 
-  /**
-   * Requests the workload thread to stop during graceful application shutdown.
-   */
+  /** Requests the workload thread to stop during graceful application shutdown. */
   @PreDestroy
   void stop() {
     // Interrupt the worker so a graceful shutdown does not leave its delay asleep.
@@ -56,7 +59,8 @@ public class HeapExhaustionTask {
   }
 
   /**
-   * Runs the configured allocation workload until the heap is exhausted or the worker is interrupted.
+   * Runs the configured allocation workload until the heap is exhausted or the worker is
+   * interrupted.
    */
   private void run() {
     if (!applicationArguments.containsOption("oom")) {
@@ -69,7 +73,8 @@ public class HeapExhaustionTask {
     int delayMilliseconds = nonNegativeIntOption("delay-ms", DEFAULT_DELAY_MILLISECONDS);
     int chunkBytes = Math.multiplyExact(chunkMib, BYTES_PER_MIB);
     long reportEveryBytes = Math.multiplyExact((long) reportEveryMib, BYTES_PER_MIB);
-    // Keep every allocation reachable; otherwise GC would reclaim it instead of exhausting the heap.
+    // Keep every allocation reachable; otherwise GC would reclaim it instead of exhausting the
+    // heap.
     List<byte[]> retained = new ArrayList<>();
     long allocatedBytes = 0;
     long nextReportBytes = reportEveryBytes;
@@ -135,7 +140,8 @@ public class HeapExhaustionTask {
    * @param defaultValue value used when the option is absent
    * @param minimum smallest accepted value
    * @return the validated option value
-   * @throws IllegalArgumentException if the option is missing a single integer value or is below the minimum
+   * @throws IllegalArgumentException if the option is missing a single integer value or is below
+   *     the minimum
    */
   private int integerOption(String name, int defaultValue, int minimum) {
     if (!applicationArguments.containsOption(name)) {
@@ -144,7 +150,8 @@ public class HeapExhaustionTask {
 
     List<String> values = applicationArguments.getOptionValues(name);
     if (values == null || values.size() != 1) {
-      throw new IllegalArgumentException("Option --%s requires exactly one integer value".formatted(name));
+      throw new IllegalArgumentException(
+          "Option --%s requires exactly one integer value".formatted(name));
     }
 
     try {
@@ -155,7 +162,8 @@ public class HeapExhaustionTask {
       }
       return value;
     } catch (NumberFormatException exception) {
-      throw new IllegalArgumentException("Option --%s must be an integer".formatted(name), exception);
+      throw new IllegalArgumentException(
+          "Option --%s must be an integer".formatted(name), exception);
     }
   }
 }
