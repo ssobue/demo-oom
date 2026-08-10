@@ -40,6 +40,8 @@ The application retains one mebibyte-sized byte array per iteration.
 
 Because every array remains reachable from a list, garbage collection cannot reclaim the allocated arrays.
 
+The allocation loop starts on a virtual thread after `ApplicationReadyEvent`, so Spring Boot can complete startup before the heap is exhausted.
+
 The process eventually terminates with an error similar to this:
 
 ```text
@@ -95,6 +97,7 @@ Open these endpoints while the demo is running:
 | URL | Purpose |
 | --- | --- |
 | http://localhost:8080 | Spring Boot application port |
+| http://localhost:8081/actuator/health | Actuator health endpoint |
 | http://localhost:8081/actuator/prometheus | Prometheus text endpoint |
 | http://localhost:9090 | Prometheus web UI |
 
@@ -107,6 +110,8 @@ jvm_memory_max_bytes{area="heap"}
 ```
 
 The Prometheus target is `app:8081`, which is the Compose service name and the management port inside the Compose network.
+
+The health endpoint returns `200` while the OOM loop is running because the loop does not block Spring Boot startup.
 
 The application eventually stops with `OutOfMemoryError`, but Prometheus remains available so the collected samples can be inspected.
 

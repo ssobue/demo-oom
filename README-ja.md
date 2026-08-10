@@ -40,6 +40,8 @@ java -XX:+UseG1GC -Xmx64m -jar build/libs/demo-oom-0.0.1-SNAPSHOT.jar --oom
 
 作成した配列をリストから参照し続けるため、ガベージコレクションは確保済みの配列を回収できません。
 
+確保ループは `ApplicationReadyEvent` の後に仮想スレッドで開始するため、ヒープを使い切る前に Spring Boot の起動が完了します。
+
 最終的に、次のようなエラーでプロセスが終了します。
 
 ```text
@@ -95,6 +97,7 @@ docker compose logs -f app
 | URL | 用途 |
 | --- | --- |
 | http://localhost:8080 | Spring Boot アプリケーションのポート |
+| http://localhost:8081/actuator/health | Actuator の Health エンドポイント |
 | http://localhost:8081/actuator/prometheus | Prometheus 形式のメトリクスエンドポイント |
 | http://localhost:9090 | Prometheus の Web UI |
 
@@ -107,6 +110,8 @@ jvm_memory_max_bytes{area="heap"}
 ```
 
 Prometheus は、Compose ネットワーク内のサービス名 `app` と管理ポート `8081` を使って `app:8081` をスクレイプします。
+
+OOM ループが起動中でも、ループが Spring Boot の起動をブロックしないため Health エンドポイントは `200` を返します。
 
 アプリケーションは最終的に `OutOfMemoryError` で停止しますが、Prometheus は動作し続けるため、取得済みのサンプルを確認できます。
 
