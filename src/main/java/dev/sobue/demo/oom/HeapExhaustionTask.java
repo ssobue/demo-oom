@@ -24,6 +24,7 @@ public class HeapExhaustionTask {
   private final ApplicationArguments applicationArguments;
   private volatile Thread worker;
 
+  // Do not block Spring Boot's startup thread; readiness must be reported before allocation begins.
   @EventListener(ApplicationReadyEvent.class)
   void start() {
     worker = Thread.ofVirtual().name("heap-exhaustion").start(this::run);
@@ -31,6 +32,7 @@ public class HeapExhaustionTask {
 
   @PreDestroy
   void stop() {
+    // Interrupt the worker so a graceful shutdown does not leave its delay asleep.
     Thread currentWorker = worker;
     if (currentWorker != null) {
       currentWorker.interrupt();
@@ -48,6 +50,7 @@ public class HeapExhaustionTask {
     int delayMilliseconds = nonNegativeIntOption("delay-ms", DEFAULT_DELAY_MILLISECONDS);
     int chunkBytes = Math.multiplyExact(chunkMib, BYTES_PER_MIB);
     long reportEveryBytes = Math.multiplyExact((long) reportEveryMib, BYTES_PER_MIB);
+    // Keep every allocation reachable; otherwise GC would reclaim it instead of exhausting the heap.
     List<byte[]> retained = new ArrayList<>();
     long allocatedBytes = 0;
     long nextReportBytes = reportEveryBytes;
