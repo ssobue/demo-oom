@@ -1,7 +1,6 @@
 package dev.sobue.demo.oom;
 
 import jakarta.annotation.PreDestroy;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -11,8 +10,10 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Runs the heap exhaustion workload after Spring Boot reports the application as ready.
+ */
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class HeapExhaustionTask {
 
@@ -24,12 +25,27 @@ public class HeapExhaustionTask {
   private final ApplicationArguments applicationArguments;
   private volatile Thread worker;
 
+  /**
+   * Creates a task that reads heap exhaustion options from the application arguments.
+   *
+   * @param applicationArguments parsed command-line arguments
+   */
+  public HeapExhaustionTask(ApplicationArguments applicationArguments) {
+    this.applicationArguments = applicationArguments;
+  }
+
+  /**
+   * Starts the workload without blocking application startup.
+   */
   // Do not block Spring Boot's startup thread; readiness must be reported before allocation begins.
   @EventListener(ApplicationReadyEvent.class)
   void start() {
     worker = Thread.ofVirtual().name("heap-exhaustion").start(this::run);
   }
 
+  /**
+   * Requests the workload thread to stop during graceful application shutdown.
+   */
   @PreDestroy
   void stop() {
     // Interrupt the worker so a graceful shutdown does not leave its delay asleep.
@@ -39,6 +55,9 @@ public class HeapExhaustionTask {
     }
   }
 
+  /**
+   * Runs the configured allocation workload until the heap is exhausted or the worker is interrupted.
+   */
   private void run() {
     if (!applicationArguments.containsOption("oom")) {
       log.info("Heap exhaustion is disabled. Start with --oom to exhaust the Java heap.");
@@ -87,14 +106,37 @@ public class HeapExhaustionTask {
     }
   }
 
+  /**
+   * Reads a command-line option that must be greater than zero.
+   *
+   * @param name option name without the leading {@code --}
+   * @param defaultValue value used when the option is absent
+   * @return the validated option value
+   */
   private int positiveIntOption(String name, int defaultValue) {
     return integerOption(name, defaultValue, 1);
   }
 
+  /**
+   * Reads a command-line option that may be zero but cannot be negative.
+   *
+   * @param name option name without the leading {@code --}
+   * @param defaultValue value used when the option is absent
+   * @return the validated option value
+   */
   private int nonNegativeIntOption(String name, int defaultValue) {
     return integerOption(name, defaultValue, 0);
   }
 
+  /**
+   * Parses and validates one integer-valued command-line option.
+   *
+   * @param name option name without the leading {@code --}
+   * @param defaultValue value used when the option is absent
+   * @param minimum smallest accepted value
+   * @return the validated option value
+   * @throws IllegalArgumentException if the option is missing a single integer value or is below the minimum
+   */
   private int integerOption(String name, int defaultValue, int minimum) {
     if (!applicationArguments.containsOption(name)) {
       return defaultValue;
