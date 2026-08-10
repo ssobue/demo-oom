@@ -1,4 +1,4 @@
-package jp.sobue.demo;
+package dev.sobue.demo.oom;
 
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +14,7 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class OomDemoTask {
+public class HeapExhaustionTask {
 
   private static final int BYTES_PER_MIB = 1024 * 1024;
   private static final int DEFAULT_CHUNK_MIB = 1;
@@ -26,7 +26,7 @@ public class OomDemoTask {
 
   @EventListener(ApplicationReadyEvent.class)
   void start() {
-    worker = Thread.ofVirtual().name("oom-demo").start(this::run);
+    worker = Thread.ofVirtual().name("heap-exhaustion").start(this::run);
   }
 
   @PreDestroy
@@ -39,7 +39,7 @@ public class OomDemoTask {
 
   private void run() {
     if (!applicationArguments.containsOption("oom")) {
-      log.info("OOM demo is disabled. Start with --oom to exhaust the Java heap.");
+      log.info("Heap exhaustion is disabled. Start with --oom to exhaust the Java heap.");
       return;
     }
 
@@ -53,7 +53,7 @@ public class OomDemoTask {
     long nextReportBytes = reportEveryBytes;
 
     log.info(
-        "Starting OOM demo: chunk={} MiB, report interval={} MiB, delay={} ms, max heap={} MiB",
+        "Starting heap exhaustion: chunk={} MiB, report interval={} MiB, delay={} ms, max heap={} MiB",
         chunkMib,
         reportEveryMib,
         delayMilliseconds,

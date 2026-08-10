@@ -1,4 +1,4 @@
-package jp.sobue.demo;
+package dev.sobue.demo.oom;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -9,8 +9,8 @@ import org.springframework.context.ApplicationContext;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @SpringBootTest
-@DisplayName("Test ApplicationContext Loading")
-class DemoApplicationTests {
+@DisplayName("Test HeapExhaustionApplication context loading")
+class HeapExhaustionApplicationTests {
 
   @Autowired
   private ApplicationContext context;

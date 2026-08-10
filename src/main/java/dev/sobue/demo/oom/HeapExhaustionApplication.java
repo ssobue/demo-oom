@@ -1,12 +1,12 @@
-package jp.sobue.demo;
+package dev.sobue.demo.oom;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class DemoApplication {
+public class HeapExhaustionApplication {
 
   public static void main(String[] args) {
-    SpringApplication.run(DemoApplication.class, args);
+    SpringApplication.run(HeapExhaustionApplication.class, args);
   }
 }
