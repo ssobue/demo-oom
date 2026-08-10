@@ -1,20 +1,74 @@
 package jp.sobue.demo;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
-import org.springframework.util.Assert;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Component
-@RequiredArgsConstructor
 public class DemoRunner implements ApplicationRunner {
 
-  private final ApplicationContext context;
+  private static final int BYTES_PER_MIB = 1024 * 1024;
+  private static final int DEFAULT_CHUNK_MIB = 1;
+  private static final int DEFAULT_REPORT_EVERY_MIB = 16;
 
   @Override
   public void run(ApplicationArguments args) {
-    Assert.notNull(context, "application context is null");
+    if (!args.containsOption("oom")) {
+      System.out.println("OOM demo is disabled. Start with --oom to exhaust the Java heap.");
+      return;
+    }
+
+    int chunkMib = positiveIntOption(args, "chunk-mb", DEFAULT_CHUNK_MIB);
+    int reportEveryMib = positiveIntOption(args, "report-every-mb", DEFAULT_REPORT_EVERY_MIB);
+    int chunkBytes = Math.multiplyExact(chunkMib, BYTES_PER_MIB);
+    long reportEveryBytes = Math.multiplyExact((long) reportEveryMib, BYTES_PER_MIB);
+    List<byte[]> retained = new ArrayList<>();
+    long allocatedBytes = 0;
+    long nextReportBytes = reportEveryBytes;
+
+    System.out.printf(
+        "Starting OOM demo: chunk=%d MiB, report interval=%d MiB, max heap=%d MiB%n",
+        chunkMib,
+        reportEveryMib,
+        Runtime.getRuntime().maxMemory() / BYTES_PER_MIB);
+
+    while (true) {
+      retained.add(new byte[chunkBytes]);
+      allocatedBytes += chunkBytes;
+
+      if (allocatedBytes >= nextReportBytes) {
+        Runtime runtime = Runtime.getRuntime();
+        long usedBytes = runtime.totalMemory() - runtime.freeMemory();
+        System.out.printf(
+            "Retained approximately %d MiB, used heap=%d MiB%n",
+            allocatedBytes / BYTES_PER_MIB,
+            usedBytes / BYTES_PER_MIB);
+        nextReportBytes = Math.addExact(nextReportBytes, reportEveryBytes);
+      }
+    }
+  }
+
+  private int positiveIntOption(ApplicationArguments args, String name, int defaultValue) {
+    if (!args.containsOption(name)) {
+      return defaultValue;
+    }
+
+    List<String> values = args.getOptionValues(name);
+    if (values == null || values.size() != 1) {
+      throw new IllegalArgumentException("Option --%s requires exactly one integer value".formatted(name));
+    }
+
+    try {
+      int value = Integer.parseInt(values.getFirst());
+      if (value <= 0) {
+        throw new IllegalArgumentException("Option --%s must be greater than zero".formatted(name));
+      }
+      return value;
+    } catch (NumberFormatException exception) {
+      throw new IllegalArgumentException("Option --%s must be an integer".formatted(name), exception);
+    }
   }
 }
