@@ -16,6 +16,7 @@ Stop the process with `Ctrl-C` if you no longer need the demonstration.
 
 - JDK 25 or newer
 - Gradle Wrapper included in this repository
+- Docker Compose v2 for the monitoring example
 
 ## Build
 
@@ -52,18 +53,65 @@ The exact amount retained before the error depends on the JDK, JVM options, and 
 | `--oom` | disabled | Enables the intentional heap exhaustion loop. |
 | `--chunk-mb` | `1` | Size of each retained byte array in MiB. |
 | `--report-every-mb` | `16` | Progress reporting interval in MiB. |
+| `--delay-ms` | `0` | Delay after each allocation in milliseconds. |
 
 For example, this command uses 4 MiB chunks and reports every 32 MiB:
 
 ```sh
 java -Xmx128m -jar build/libs/demo-oom-0.0.1-SNAPSHOT.jar \
-  --oom --chunk-mb=4 --report-every-mb=32
+  --oom --chunk-mb=4 --report-every-mb=32 --delay-ms=100
 ```
 
-Without `--oom`, the application prints a message and exits without allocating the demonstration data:
+Without `--oom`, the application starts its HTTP server, prints a message, and waits without allocating the demonstration data:
 
 ```sh
 java -jar build/libs/demo-oom-0.0.1-SNAPSHOT.jar
+```
+
+## Monitor with Docker Compose
+
+Docker Compose starts the OOM demo and a Prometheus server on the same network.
+
+The Compose configuration limits the application heap to 128 MiB and inserts a 250 millisecond delay between allocations.
+
+That delay leaves enough scrape points to observe the heap rising before the application reaches `OutOfMemoryError`.
+
+Start both services with:
+
+```sh
+docker compose up --build -d
+```
+
+Follow the application logs in a separate terminal:
+
+```sh
+docker compose logs -f app
+```
+
+Open these endpoints while the demo is running:
+
+| URL | Purpose |
+| --- | --- |
+| http://localhost:8080 | Spring Boot application port |
+| http://localhost:8081/actuator/prometheus | Prometheus text endpoint |
+| http://localhost:9090 | Prometheus web UI |
+
+In the Prometheus UI, try these queries:
+
+```promql
+jvm_memory_used_bytes{area="heap"}
+jvm_memory_committed_bytes{area="heap"}
+jvm_memory_max_bytes{area="heap"}
+```
+
+The Prometheus target is `app:8081`, which is the Compose service name and the management port inside the Compose network.
+
+The application eventually stops with `OutOfMemoryError`, but Prometheus remains available so the collected samples can be inspected.
+
+Stop the services with:
+
+```sh
+docker compose down
 ```
 
 See [README-ja.md](README-ja.md) for the Japanese documentation.

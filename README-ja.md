@@ -16,6 +16,7 @@ Java ヒープを意図的に使い切り、`java.lang.OutOfMemoryError` を発�
 
 - JDK 25 以降
 - リポジトリに含まれる Gradle Wrapper
+- 監視例には Docker Compose v2
 
 ## ビルド
 
@@ -52,18 +53,65 @@ java.lang.OutOfMemoryError: Java heap space
 | `--oom` | 無効 | 意図的にヒープを使い切るループを有効にします。 |
 | `--chunk-mb` | `1` | 1 回に保持する `byte[]` のサイズを MiB で指定します。 |
 | `--report-every-mb` | `16` | MiB 単位の進捗表示間隔を指定します。 |
+| `--delay-ms` | `0` | 確保 1 回ごとの待機時間をミリ秒で指定します。 |
 
 次の例では、4 MiB ずつ確保し、32 MiB ごとに進捗を表示します。
 
 ```sh
 java -Xmx128m -jar build/libs/demo-oom-0.0.1-SNAPSHOT.jar \
-  --oom --chunk-mb=4 --report-every-mb=32
+  --oom --chunk-mb=4 --report-every-mb=32 --delay-ms=100
 ```
 
-`--oom` を付けない場合、アプリケーションはメッセージを表示して終了し、実験用のデータを確保しません。
+`--oom` を付けない場合、アプリケーションは HTTP サーバーを起動してメッセージを表示し、実験用のデータを確保せずに待機します。
 
 ```sh
 java -jar build/libs/demo-oom-0.0.1-SNAPSHOT.jar
+```
+
+## Docker Compose で監視する
+
+Docker Compose は、OOM デモと Prometheus を同じネットワーク上で起動します。
+
+Compose の設定では、アプリケーションのヒープ上限を 128 MiB に設定し、確保ごとに 250 ミリ秒待機します。
+
+この待機時間によって、アプリケーションが `OutOfMemoryError` に到達する前のヒープ増加を複数のスクレイプ結果で追跡できます。
+
+次のコマンドで両方のサービスを起動します。
+
+```sh
+docker compose up --build -d
+```
+
+別のターミナルでアプリケーションのログを確認できます。
+
+```sh
+docker compose logs -f app
+```
+
+デモの実行中は、次の URL を開いてください。
+
+| URL | 用途 |
+| --- | --- |
+| http://localhost:8080 | Spring Boot アプリケーションのポート |
+| http://localhost:8081/actuator/prometheus | Prometheus 形式のメトリクスエンドポイント |
+| http://localhost:9090 | Prometheus の Web UI |
+
+Prometheus の Web UI では、次のクエリを実行できます。
+
+```promql
+jvm_memory_used_bytes{area="heap"}
+jvm_memory_committed_bytes{area="heap"}
+jvm_memory_max_bytes{area="heap"}
+```
+
+Prometheus は、Compose ネットワーク内のサービス名 `app` と管理ポート `8081` を使って `app:8081` をスクレイプします。
+
+アプリケーションは最終的に `OutOfMemoryError` で停止しますが、Prometheus は動作し続けるため、取得済みのサンプルを確認できます。
+
+サービスを停止するときは、次のコマンドを実行します。
+
+```sh
+docker compose down
 ```
 
 英語版は [README.md](README.md) です。
