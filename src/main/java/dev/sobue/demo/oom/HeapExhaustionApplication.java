@@ -3,15 +3,11 @@ package dev.sobue.demo.oom;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-/**
- * Starts the Spring Boot application used to observe controlled heap exhaustion.
- */
+/** Starts the Spring Boot application used to observe controlled heap exhaustion. */
 @SpringBootApplication
 public class HeapExhaustionApplication {
 
-  /**
-   * Creates the application configuration object.
-   */
+  /** Creates the application configuration object. */
   public HeapExhaustionApplication() {}
 
   /**
