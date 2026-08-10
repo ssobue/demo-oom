@@ -1,5 +1,6 @@
 package jp.sobue.demo;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
@@ -8,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
+@Slf4j
 public class DemoRunner implements ApplicationRunner {
 
   private static final int BYTES_PER_MIB = 1024 * 1024;
@@ -18,7 +20,7 @@ public class DemoRunner implements ApplicationRunner {
   @Override
   public void run(ApplicationArguments args) {
     if (!args.containsOption("oom")) {
-      System.out.println("OOM demo is disabled. Start with --oom to exhaust the Java heap.");
+      log.info("OOM demo is disabled. Start with --oom to exhaust the Java heap.");
       return;
     }
 
@@ -31,8 +33,8 @@ public class DemoRunner implements ApplicationRunner {
     long allocatedBytes = 0;
     long nextReportBytes = reportEveryBytes;
 
-    System.out.printf(
-        "Starting OOM demo: chunk=%d MiB, report interval=%d MiB, delay=%d ms, max heap=%d MiB%n",
+    log.info(
+        "Starting OOM demo: chunk={} MiB, report interval={} MiB, delay={} ms, max heap={} MiB",
         chunkMib,
         reportEveryMib,
         delayMilliseconds,
@@ -45,8 +47,8 @@ public class DemoRunner implements ApplicationRunner {
       if (allocatedBytes >= nextReportBytes) {
         Runtime runtime = Runtime.getRuntime();
         long usedBytes = runtime.totalMemory() - runtime.freeMemory();
-        System.out.printf(
-            "Retained approximately %d MiB, used heap=%d MiB%n",
+        log.info(
+            "Retained approximately {} MiB, used heap={} MiB",
             allocatedBytes / BYTES_PER_MIB,
             usedBytes / BYTES_PER_MIB);
         nextReportBytes = Math.addExact(nextReportBytes, reportEveryBytes);
